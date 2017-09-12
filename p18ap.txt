@@ -1,0 +1,115 @@
+000100 IDENTIFICATION DIVISION.                                         00010000
+000200 PROGRAM-ID. P18AP01.                                             00020005
+000300 DATA DIVISION.                                                   00030000
+000400 WORKING-STORAGE SECTION.                                         00040000
+000500 01  WS-CA       PIC X(01).                                       00050000
+000600 01  WS-IN1      PIC 9(02).                                       00060000
+000700 01  WS-IN1O REDEFINES WS-IN1 PIC X(02).                          00070000
+000800 01  WS-IN2      PIC 9(02).                                       00080000
+000900 01  WS-IN2O REDEFINES WS-IN2 PIC X(02).                          00090000
+001000 01  WS-OUTA     PIC 9(03).                                       00100002
+001100 01  WS-OUTB     PIC 9(03).                                       00110002
+001200 01  WS-OUTC     PIC 9(03).                                       00120002
+001300 01  WS-MESSAGE  PIC X(30) VALUE                                  00130000
+001400     'END OF THE PROGRAM, BYE, BYE!!'.                            00140000
+001500     COPY P18AS01.                                                00150000
+001600     COPY DFHAID.                                                 00160000
+001700 LINKAGE SECTION.                                                 00170000
+001800 01  DFHCOMMAREA     PIC X(01).                                   00180000
+001900 PROCEDURE DIVISION.                                              00190000
+002000 MAIN-PARA.                                                       00200000
+002100     IF EIBCALEN = ZERO                                           00210000
+002200         PERFORM FIRST-PARA                                       00220000
+002300     ELSE                                                         00230000
+002400         PERFORM NEXT-PARA.                                       00240000
+002500 END-PARA.                                                        00250000
+002600     EXEC CICS RETURN                                             00260000
+002700         TRANSID('P18A')                                          00270005
+002800         COMMAREA(WS-CA)                                          00280000
+002900     END-EXEC.                                                    00290000
+003000 FIRST-PARA.                                                      00300000
+003100     MOVE LOW-VALUES TO CALMAPO                                   00310000
+003200      PERFORM SEND-MAP.                                           00320000
+003300 SEND-MAP.                                                        00330000
+003400     EXEC CICS SEND                                               00340000
+003500         MAP('CALMAP')                                            00350000
+003600         MAPSET('P18AS01')                                        00360000
+003700         FROM (CALMAPO)                                           00370000
+003800         ERASE                                                    00380000
+003900     END-EXEC.                                                    00390000
+004000 NEXT-PARA.                                                       00400000
+004100     IF EIBAID = DFHPF3                                           00410000
+004200         EXEC CICS SEND TEXT                                      00420000
+004300             FROM(WS-MESSAGE)                                     00430000
+004400             ERASE                                                00440000
+004500         END-EXEC                                                 00450000
+004600         EXEC CICS RETURN                                         00460000
+004700         END-EXEC                                                 00470000
+004800     ELSE                                                         00480000
+004900     IF EIBAID = DFHENTER                                         00490000
+005000         PERFORM PROCESS-PARA                                     00500000
+005100     ELSE                                                         00510000
+005200         MOVE 'INVALID KEY PRESSED' TO MESSAGEO.                  00520000
+005300     PERFORM SEND-MAP.                                            00530000
+005400*                                                                 00540002
+005500 ADD-PARA.                                                        00550002
+005600     IF INPUT1L = ZERO OR INPUT2L = ZERO                          00560002
+005700         MOVE 'PLEASE ENTER VALID INPUTS' TO MESSAGEO             00570002
+005800     ELSE                                                         00580002
+005900        IF INPUT1I IS NUMERIC AND INPUT2I IS NUMERIC              00590002
+006000             MOVE INPUT1I TO WS-IN1O                              00600002
+006100             MOVE INPUT2I TO WS-IN2O                              00610002
+006200             COMPUTE WS-OUTA = WS-IN1 + WS-IN2                    00620003
+006300             MOVE WS-OUTA  TO ADD1O                               00630003
+006400             MOVE 'SUM OF 2 NUMBERS IS DISPLAYED' TO MESSAGEO     00640002
+006500        ELSE                                                      00650002
+006600             MOVE 'INPUTS ARE NOT NUMERIC' TO MESSAGEO.           00660002
+006700*                                                                 00670002
+006800 SUB-PARA.                                                        00680002
+006900     IF INPUT1L = ZERO OR INPUT2L = ZERO                          00690002
+007000         MOVE 'PLEASE ENTER VALID INPUTS' TO MESSAGEO             00700002
+007100     ELSE                                                         00710002
+007200        IF INPUT1I IS NUMERIC AND INPUT2I IS NUMERIC              00720002
+007300             MOVE INPUT1I TO WS-IN1O                              00730002
+007400             MOVE INPUT2I TO WS-IN2O                              00740002
+007500             COMPUTE WS-OUTB =  WS-IN1 - WS-IN2                   00750002
+007600             MOVE WS-OUTB  TO SUB1O                               00760003
+007700             MOVE 'SUB OF 2 NUMBERS IS DISPLAYED' TO MESSAGEO     00770003
+007800        ELSE                                                      00780002
+007900             MOVE 'INPUTS ARE NOT NUMERIC' TO MESSAGEO.           00790002
+008000*                                                                 00800002
+008100 MUL-PARA.                                                        00810002
+008200     IF INPUT1L = ZERO OR INPUT2L = ZERO                          00820002
+008300         MOVE 'PLEASE ENTER VALID INPUTS' TO MESSAGEO             00830002
+008400     ELSE                                                         00840002
+008500        IF INPUT1I IS NUMERIC AND INPUT2I IS NUMERIC              00850002
+008600             MOVE INPUT1I TO WS-IN1O                              00860002
+008700             MOVE INPUT2I TO WS-IN2O                              00870002
+008800             COMPUTE WS-OUTC = WS-IN1 * WS-IN2                    00880003
+008900             MOVE WS-OUTC  TO MULO                                00890003
+009000             MOVE 'MUL OF 2 NUMBERS IS DISPLAYED' TO MESSAGEO     00900003
+009100        ELSE                                                      00910002
+009200             MOVE 'INPUTS ARE NOT NUMERIC' TO MESSAGEO.           00920002
+009300*                                                                 00930002
+009400 PROCESS-PARA.                                                    00940000
+009500     PERFORM RECEIVE-MAP.                                         00950000
+009600     PERFORM ADD-PARA.                                            00960002
+009700     PERFORM SUB-PARA.                                            00970002
+009800     PERFORM MUL-PARA.                                            00980002
+009900*    IF INPUT1L = ZERO OR INPUT2L = ZERO                          00990002
+010000*        MOVE 'PLEASE ENTER VALID INPUTS' TO MESSAGEO             01000002
+010100*    ELSE                                                         01010002
+010200*       IF INPUT1I IS NUMERIC AND INPUT2I IS NUMERIC              01020002
+010300*            MOVE INPUT1I TO WS-IN1O                              01030002
+010400*            MOVE INPUT2I TO WS-IN2O                              01040002
+010500*            COMPUTE WS-OUT = WS-IN1 + WS-IN2                     01050002
+010600*            MOVE WS-OUT  TO OUTPUTO                              01060002
+010700*            MOVE 'SUM OF 2 NUMBERS IS DISPLAYED' TO MESSAGEO     01070002
+010800*       ELSE                                                      01080002
+010900*            MOVE 'INPUTS ARE NOT NUMERIC' TO MESSAGEO.           01090002
+011000 RECEIVE-MAP.                                                     01100002
+011100     EXEC CICS RECEIVE                                            01110002
+011200         MAP('CALMAP')                                            01120002
+011300         MAPSET('P18AS01')                                        01130002
+011400         INTO(CALMAPI)                                            01140002
+011500     END-EXEC.                                                    01150002

@@ -1,0 +1,92 @@
+000100 IDENTIFICATION DIVISION.                                         00010006
+000200 PROGRAM-ID. P18AP02.                                             00020006
+000300 DATA DIVISION.                                                   00030006
+000400 WORKING-STORAGE SECTION.                                         00040006
+000500 01 WS-CA            PIC X(01).                                   00050007
+000600 01 WS-CHOICE        PIC 9(01) VALUE ZERO.                        00060006
+000700      88 VALID-CHOICE    VALUES 1 THRU 4.                         00070007
+000800 01 WS-CHOICE-X REDEFINES WS-CHOICE PIC X(01).                    00080006
+000900 01 WS-DATE-TIME      PIC S9(15) COMP-3 VALUE ZERO.               00090006
+001000 01 WS-MESSAGE PIC X(30) VALUE                                    00100006
+001100     'END OF THE PROGRAM, BYE, BYE!!'.                            00110003
+001200      COPY P18AS02.                                               00120007
+001300      COPY DFHAID.                                                00130003
+001400 LINKAGE SECTION.                                                 00140006
+001500  01  DFHCOMMAREA  PIC X(01).                                     00150006
+001600 PROCEDURE DIVISION.                                              00160006
+001700 MAIN-PARA.                                                       00170006
+001800     IF EIBCALEN = ZERO                                           00180007
+001900       PERFORM FIRST-PARA                                         00190007
+002000     ELSE                                                         00200007
+002100       PERFORM NEXT-PARA.                                         00210007
+002200 END-PARA.                                                        00220006
+002300      EXEC CICS RETURN                                            00230007
+002400      TRANSID('P18B')                                             00240001
+002500      COMMAREA(WS-CA)                                             00250001
+002600      END-EXEC.                                                   00260007
+002700 FIRST-PARA.                                                      00270006
+002800     MOVE LOW-VALUES TO MENUMAPO                                  00280001
+002900     PERFORM SEND-PARA.                                           00290001
+003000 SEND-PARA.                                                       00300006
+003100       PERFORM DATE-TIME-PARA.                                    00310001
+003200      EXEC CICS SEND                                              00320007
+003300          MAP('MENUMAP')                                          00330004
+003400          MAPSET('P18AS02')                                       00340010
+003500          FROM (MENUMAPO)                                         00350004
+003600          ERASE                                                   00360004
+003700       END-EXEC.                                                  00370007
+003800 NEXT-PARA.                                                       00380006
+003900       EVALUATE EIBAID                                            00390004
+004000         WHEN DFHPF3                                              00400004
+004100           EXEC CICS SEND TEXT                                    00410004
+004200             FROM(WS-MESSAGE)                                     00420004
+004300             ERASE                                                00430007
+004400           END-EXEC                                               00440004
+004500           EXEC CICS RETURN                                       00450004
+004600           END-EXEC                                               00460004
+004700        WHEN DFHENTER                                             00470004
+004800          PERFORM PROCESS-PARA                                    00480004
+004900        WHEN OTHER                                                00490004
+005000           MOVE 'INVALID KEY PRESSED' TO MESSAGEO                 00500004
+005100        END-EVALUATE                                              00510004
+005200        PERFORM SEND-PARA.                                        00520004
+005300 PROCESS-PARA.                                                    00530006
+005400       PERFORM RECEIVE-MAP                                        00540000
+005500       MOVE CHOICEI TO WS-CHOICE-X                                00550007
+005600       IF VALID-CHOICE                                            00560000
+005700         PERFORM TRANSFER-PARA                                    00570000
+005800       ELSE                                                       00580000
+005900         MOVE 'INVALID CHOICE' TO MESSAGEO                        00590000
+006000       END-IF.                                                    00600000
+006100 TRANSFER-PARA.                                                   00610000
+006200          EVALUATE WS-CHOICE                                      00620013
+006300          WHEN 1                                                  00630000
+006400            EXEC CICS XCTL                                        00640000
+006500                 PROGRAM('P18AP01')                               00650008
+006600            END-EXEC                                              00660000
+006700          WHEN 2                                                  00670009
+006800             EXEC CICS XCTL                                       00680009
+006900              PROGRAM('P18AP03')                                  00690011
+007000            END-EXEC                                              00700009
+007100        WHEN 3                                                    00710012
+007200            EXEC CICS XCTL                                        00720012
+007300            PROGRAM('P18AP04')                                    00730012
+007400            END-EXEC                                              00740013
+007500          END-EVALUATE.                                           00750004
+007600 RECEIVE-MAP.                                                     00760006
+007700        EXEC CICS RECEIVE                                         00770002
+007800           MAP('MENUMAP')                                         00780002
+007900           MAPSET('P18AS02')                                      00790002
+008000           INTO(MENUMAPI)                                         00800007
+008100        END-EXEC.                                                 00810002
+008200 DATE-TIME-PARA.                                                  00820002
+008300       EXEC CICS ASKTIME                                          00830002
+008400          ABSTIME(WS-DATE-TIME)                                   00840002
+008500       END-EXEC.                                                  00850004
+008600       EXEC CICS FORMATTIME                                       00860004
+008700           ABSTIME(WS-DATE-TIME)                                  00870004
+008800          DDMMYYYY(SYSDATEO)                                      00880002
+008900          DATESEP                                                 00890002
+009000          TIME(SYSTIMEO)                                          00900002
+009100          TIMESEP                                                 00910002
+009200          END-EXEC.                                               00920004

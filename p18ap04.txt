@@ -1,0 +1,328 @@
+000100 IDENTIFICATION DIVISION.                                         00010000
+000200 PROGRAM-ID. P18AP04.                                             00020000
+000300 DATA DIVISION.                                                   00030000
+000400 WORKING-STORAGE SECTION.                                         00040000
+000500 01 WS-RESP-CODE     PIC S9(08) COMP VALUE ZERO.                  00050000
+000600 01 WS-CA.                                                        00060000
+000700   03 WS-PROCESS-FLAG   PIC X(01) VALUE SPACES.                   00070000
+000800   88 PROCESS-KEY          VALUE '1'.                             00080000
+000900   88 PROCESS-ADD          VALUE '2'.                             00090000
+001000   88 PROCESS-UPD-DEL      VALUE '3'.                             00100000
+001100   88 PROCESS-DET          VALUE '2', '3'.                        00110000
+001200   03 WS-EMP-ID  PIC X(05) VALUE SPACES.                          00120004
+001300 01 WS-DATE-TIME   PIC S9(15) COMP-3 VALUE ZERO.                  00130000
+001400 01 WS-DOB.                                                       00140000
+001500    03 WS-DOB-YY   PIC 9(04) VALUE ZERO.                          00150000
+001600    03 WS-DOB-MM   PIC 9(02) VALUE ZERO.                          00160000
+001700    03 WS-DOB-DD   PIC X(02) VALUE ZERO.                          00170000
+001800 01 WS-TIME        PIC X(08) VALUE SPACES.                        00180000
+001900 01 WS-EARN          PIC ZZ,ZZ9.99 VALUE ZERO.                    00190000
+002000 01 WS-EARN-O        PIC ZZ,ZZ9.99 VALUE ZERO.                    00200000
+002100 01 WS-DEDN          PIC ZZ,ZZ9.99 VALUE ZERO.                    00210000
+002200 01 WS-DEDN-O        PIC ZZ,ZZ9.99 VALUE ZERO.                    00220000
+002300 01 WS-SAL           PIC 9(05)V99  VALUE ZERO.                    00230000
+002400 01 WS-SAL-O        PIC ZZ,ZZ9.99 VALUE ZERO.                     00240000
+002500       COPY EMPREC.                                               00250000
+002600        COPY P18AS04.                                             00260000
+002700        COPY DFHAID.                                              00270000
+002800        COPY DFHBMSCA.                                            00280000
+002900 LINKAGE SECTION.                                                 00290000
+003000 01 DFHCOMMAREA     PIC X(06).                                    00300000
+003100 PROCEDURE DIVISION.                                              00310000
+003200 MAIN-PARA.                                                       00320000
+003300      IF EIBCALEN = ZERO                                          00330000
+003400       PERFORM FIRST-PARA                                         00340000
+003500     ELSE                                                         00350000
+003600       MOVE DFHCOMMAREA TO WS-CA                                  00360000
+003700       PERFORM NEXT-PARA THRU NEXT-PARA-X                         00370000
+003800       END-IF.                                                    00380000
+003900*                                                                 00390000
+004000 END-PARA.                                                        00400000
+004100         EXEC CICS                                                00410000
+004200           RETURN TRANSID('P18D')                                 00420000
+004300           COMMAREA(WS-CA)                                        00430000
+004400         END-EXEC.                                                00440000
+004500*                                                                 00450000
+004600 FIRST-PARA.                                                      00460000
+004700       MOVE LOW-VALUES TO KEYMAPO                                 00470000
+004800       PERFORM SEND-FIRST-MAP.                                    00480000
+004900*                                                                 00490000
+005000 SEND-FIRST-MAP.                                                  00500000
+005100      PERFORM DATE-TIME-PARA.                                     00510000
+005200      PERFORM SEND-KEY-MAP.                                       00520003
+005300      SET PROCESS-KEY TO TRUE.                                    00530000
+005400*                                                                 00540003
+005500 SEND-KEY-MAP.                                                    00550003
+005600        EXEC CICS SEND                                            00560003
+005700        MAP('KEYMAP')                                             00570003
+005800        MAPSET('P18AS04')                                         00580003
+005900        FROM(KEYMAPO)                                             00590003
+006000        ERASE                                                     00600003
+006100        END-EXEC.                                                 00610003
+006200*                                                                 00620000
+006300 NEXT-PARA.                                                       00630000
+006400      EVALUATE TRUE                                               00640000
+006500        WHEN PROCESS-KEY                                          00650000
+006600            PERFORM PROCESS-KEYMAP-PARA                           00660003
+006700        WHEN PROCESS-DET                                          00670000
+006800            PERFORM DETAIL-PARA                                   00680000
+006900      END-EVALUATE.                                               00690000
+007000*                                                                 00700000
+007100 SEND-PARA.                                                       00710000
+007200       EVALUATE TRUE                                              00720000
+007300          WHEN PROCESS-KEY                                        00730000
+007400          PERFORM SEND-KEY-MAP                                    00740003
+007500        WHEN PROCESS-DET                                          00750000
+007600          PERFORM SEND-DETAIL-MAP                                 00760003
+007700       END-EVALUATE.                                              00770003
+007800*                                                                 00780000
+007900 NEXT-PARA-X.                                                     00790000
+008000      EXIT.                                                       00800000
+008100*                                                                 00810000
+008200 PROCESS-KEYMAP-PARA.                                             00820003
+008300          EVALUATE EIBAID                                         00830000
+008400              WHEN DFHPF3                                         00840000
+008500                 EXEC CICS XCTL                                   00850000
+008600                     PROGRAM('P18AP02')                           00860000
+008700                 END-EXEC                                         00870000
+008800          WHEN DFHENTER                                           00880000
+008900             PERFORM RECEIVE-PROCESS-KEYMAP                       00890003
+009000          WHEN OTHER                                              00900000
+009100             MOVE 'INVALID KEY PRESSED' TO MSG1O                  00910000
+009200          END-EVALUATE.                                           00920000
+009300*                                                                 00930000
+009400 RECEIVE-PROCESS-KEYMAP.                                          00940003
+009500      PERFORM RECEIVE-KEY-MAP                                     00950003
+009600      IF ID1L = ZERO OR ID1I = SPACES                             00960000
+009700        MOVE 'ENTER AN EMPLOYEE ID' TO MSG1O                      00970000
+009800      ELSE                                                        00980000
+009900       PERFORM READ-EMPLOYEE                                      00990000
+010000      END-IF.                                                     01000000
+010100*                                                                 01010003
+010200 RECEIVE-KEY-MAP.                                                 01020003
+010300        EXEC CICS RECEIVE                                         01030003
+010400            MAP('KEYMAP')                                         01040003
+010500            MAPSET('P18AS04')                                     01050003
+010600            INTO(KEYMAPI)                                         01060003
+010700        END-EXEC.                                                 01070003
+010800*                                                                 01080000
+010900 READ-EMPLOYEE.                                                   01090000
+011000       MOVE LOW-VALUES TO DETMAPO                                 01100000
+011100      MOVE ID1I TO WS-EMP-ID, ID2O                                01110000
+011200        EXEC CICS READ                                            01120000
+011300         FILE('P18AFILE')                                         01130000
+011400         RIDFLD(WS-EMP-ID)                                        01140000
+011500          INTO(EMPLOYEE-RECORD)                                   01150000
+011600         RESP(WS-RESP-CODE)                                       01160000
+011700        END-EXEC.                                                 01170000
+011800      EVALUATE WS-RESP-CODE                                       01180000
+011900        WHEN DFHRESP(NORMAL)                                      01190000
+012000           MOVE EMP-NAME  TO NAME2O                               01200000
+012100           MOVE EMP-TECH  TO TECH2O                               01210000
+012200           MOVE EMP-LOC   TO LOC2O                                01220000
+012300           MOVE EMP-EARN  TO WS-EARN                              01230000
+012400           PERFORM MOVE-DOB                                       01240000
+012500              MOVE WS-EARN TO EARN2O                              01250000
+012600                MOVE EMP-DEDN TO WS-DEDN                          01260000
+012700                MOVE WS-DEDN TO DEDN2O                            01270000
+012800             COMPUTE WS-SAL = EMP-EARN -  EMP-DEDN                01280000
+012900              MOVE WS-SAL TO WS-SAL-O                             01290000
+013000              MOVE WS-SAL-O TO SAL2O                              01300000
+013100              MOVE 'DETAILS FOUND' TO MSG2O                       01310000
+013200*      SET PROCESS-UPD-DEL TO TRUE                                01320000
+013300       MOVE 'UPDATE /DELETE' TO MODE1O                            01330000
+013400       MOVE -1               TO NAME2L                            01340002
+013500       SET PROCESS-UPD-DEL TO TRUE                                01350000
+013600       MOVE DFHBMDAR TO LAB1A                                     01360000
+013700       MOVE DFHBMPRO TO LAB2A                                     01370000
+013800         WHEN DFHRESP(NOTFND)                                     01380000
+013900            MOVE -1       TO NAME2L                               01390000
+014000           MOVE SPACES    TO     NAME2O, DOB2O,                   01400000
+014100                             TECH2O, LOC2O,                       01410000
+014200                             EARN2O, DEDN2O, SAL2O                01420000
+014300*          MOVE 'EMPLOYEE NOT FOUND     ' TO MSG2O                01430000
+014400*        WHEN OTHER                                               01440000
+014500*           MOVE 'ERROR IN ACCESSING FILE ' TO MSG2O              01450000
+014600*          MOVE SPACES    TO     NAME2O, DOB2O,                   01460000
+014700*                            TECH2O, LOC2O,                       01470000
+014800*                            EARN2O, DEDN2O, SAL2O                01480000
+014900*           SET PROCESS-ADD TO TRUE                               01490000
+015000            MOVE 'ADD EMPLOYEE' TO MODE1O                         01500000
+015100            SET PROCESS-ADD TO TRUE                               01510000
+015200            MOVE DFHBMPRO TO LAB1A                                01520000
+015300            MOVE DFHBMDAR TO LAB2A                                01530000
+015400            WHEN OTHER                                            01540000
+015500              MOVE ' ERROR IN ACCESSING' TO MSG1O                 01550000
+015600           END-EVALUATE.                                          01560000
+015700*                                                                 01570000
+015800 SEND-DETAIL-MAP.                                                 01580003
+015900        PERFORM DATE-TIME-PARA.                                   01590000
+016000         EXEC CICS SEND                                           01600000
+016100         MAP('DETMAP')                                            01610000
+016200         MAPSET('P18AS04')                                        01620000
+016300         FROM (DETMAPO)                                           01630000
+016400         CURSOR                                                   01640000
+016500         ERASE                                                    01650000
+016600         END-EXEC.                                                01660005
+016700*                                                                 01670000
+016800 DETAIL-PARA.                                                     01680000
+016900        EVALUATE EIBAID                                           01690000
+017000          WHEN DFHPF2                                             01700000
+017100            IF PROCESS-ADD                                        01710000
+017200              PERFORM ADD-PARA                                    01720000
+017300            ELSE                                                  01730000
+017400              MOVE 'PF2 NOT ENABLED' TO MSG2O                     01740000
+017500            END-IF                                                01750000
+017600         WHEN DFHPF3                                              01760000
+017700           SET PROCESS-KEY TO TRUE                                01770000
+017800         WHEN DFHPF4                                              01780000
+017900            IF PROCESS-UPD-DEL                                    01790000
+018000               PERFORM UPDATE-PARA                                01800000
+018100            ELSE                                                  01810000
+018200              MOVE 'PF4 NOT ENABLED' TO MSG2O                     01820000
+018300             END-IF                                               01830000
+018400         WHEN DFHPF5                                              01840000
+018500            IF PROCESS-UPD-DEL                                    01850000
+018600               PERFORM DELETE-PARA                                01860000
+018700            ELSE                                                  01870000
+018800              MOVE 'PF5 NOT ENABLED' TO MSG2O                     01880000
+018900             END-IF                                               01890000
+019000          WHEN OTHER                                              01900000
+019100           MOVE 'INVALID KEY PRESSED' TO MSG2O                    01910000
+019200        END-EVALUATE.                                             01920000
+019300*                                                                 01930000
+019400 RECEIVE-DETAIL-MAP.                                              01940004
+019500       EXEC CICS RECEIVE                                          01950004
+019600           MAP('DETMAP')                                          01960004
+019700           MAPSET('P18AS04')                                      01970004
+019800           INTO(DETMAPI)                                          01980004
+019900       END-EXEC.                                                  01990004
+020000*                                                                 02000004
+020100 DELETE-PARA.                                                     02010000
+020200       EXEC CICS DELETE                                           02020000
+020300         FILE('P18AFILE')                                         02030000
+020400         RIDFLD(WS-EMP-ID)                                        02040000
+020500         RESP(WS-RESP-CODE)                                       02050000
+020600      END-EXEC                                                    02060000
+020700      EVALUATE WS-RESP-CODE                                       02070000
+020800        WHEN DFHRESP(NORMAL)                                      02080000
+020900          MOVE 'DELETE SUCCESSFUL' TO MSG1O                       02090000
+021000        WHEN OTHER                                                02100000
+021100          MOVE 'DELETE NOT SUCCESSFUL' TO MSG1O                   02110000
+021200*          EXEC CICS                                              02120000
+021300*         UNLOCK FILE('P18AFILE')                                 02130000
+021400*          END-EXEC.                                              02140000
+021500      END-EVALUATE                                                02150000
+021600         SET PROCESS-KEY TO TRUE                                  02160000
+021700         MOVE WS-EMP-ID TO ID1O.                                  02170000
+021800*                                                                 02180000
+021900 ADD-PARA.                                                        02190000
+022000         PERFORM RECEIVE-DETAIL-MAP                               02200004
+022100*        MOVE ID2O TO EMP-ID                                      02210001
+022200*        MOVE NAME2O TO EMP-NAME                                  02220001
+022300*        MOVE LOC2O TO EMP-LOC                                    02230001
+022400*        MOVE DOB2O TO EMP-DOB                                    02240001
+022500*        MOVE TECH2O TO EMP-TECH                                  02250001
+022600*        MOVE EARN2O TO EMP-EARN                                  02260001
+022700*        MOVE DEDN2O TO EMP-DEDN                                  02270001
+022800*        MOVE WS-DEDN-O TO EMP-DEDN                               02280000
+022900*          COMPUTE WS-SAL-O = WS-EARN-O - WS-DEDN-O               02290000
+023000         MOVE WS-EMP-ID TO EMP-ID                                 02300001
+023100         MOVE NAME2I TO EMP-NAME                                  02310001
+023200         MOVE LOC2I TO EMP-LOC                                    02320001
+023300         MOVE DOB2I TO EMP-DOB                                    02330001
+023400         MOVE TECH2I TO EMP-TECH                                  02340001
+023500         MOVE EARN2I TO EMP-EARN                                  02350001
+023600         MOVE DEDN2I TO EMP-DEDN                                  02360001
+023700          COMPUTE WS-SAL = EMP-EARN - EMP-DEDN                    02370000
+023800           MOVE WS-SAL TO WS-SAL-O                                02380000
+023900        PERFORM WRITE-PARA.                                       02390000
+024000*                                                                 02400000
+024100 WRITE-PARA.                                                      02410000
+024200       EXEC CICS WRITE                                            02420000
+024300         FILE('P18AFILE')                                         02430000
+024400         RIDFLD(WS-EMP-ID)                                        02440000
+024500         FROM(EMPLOYEE-RECORD)                                    02450000
+024600         RESP(WS-RESP-CODE)                                       02460000
+024700       END-EXEC                                                   02470000
+024800         EVALUATE WS-RESP-CODE                                    02480000
+024900         WHEN DFHRESP(NORMAL)                                     02490000
+025000            MOVE 'ADD SUCCESSFUL' TO MSG1O                        02500000
+025100         WHEN OTHER                                               02510000
+025200            MOVE 'ADD NOT SUCEESSFUL' TO MSG1O                    02520000
+025300         END-EVALUATE                                             02530000
+025400         SET PROCESS-KEY TO TRUE                                  02540000
+025500         MOVE WS-EMP-ID TO ID1O.                                  02550000
+025600*                                                                 02560000
+025700 UPDATE-PARA.                                                     02570000
+025800           PERFORM RECEIVE-DETAIL-MAP                             02580004
+025900*      EXEC CICS WRITE                                            02590001
+026000*        FILE('P18AFILE')                                         02600001
+026100*        RIDFLD(WS-EMP-ID)                                        02610001
+026200*        FROM(EMPLOYEE-RECORD)                                    02620001
+026300*        RESP(WS-RESP-CODE)                                       02630001
+026400*      END-EXEC                                                   02640001
+026500*        MOVE ID2O TO EMP-ID                                      02650001
+026600*        MOVE NAME2O TO EMP-NAME                                  02660001
+026700*        MOVE LOC2O TO EMP-LOC                                    02670001
+026800*        MOVE DOB2O TO EMP-DOB                                    02680001
+026900*        MOVE TECH2O TO EMP-TECH                                  02690001
+027000*       MOVE EARN2O TO EMP-EARN                                   02700001
+027100*       MOVE DEDN2O TO EMP-DEDN                                   02710001
+027200*         COMPUTE WS-SAL = EMP-EARN - EMP-DEDN                    02720001
+027300*          MOVE WS-SAL-O TO WS-SAL                                02730000
+027400      PERFORM RE-WRITE-PARA.                                      02740000
+027500*                                                                 02750000
+027600 RE-WRITE-PARA.                                                   02760000
+027700       EXEC CICS READ                                             02770000
+027800         FILE('P18AFILE')                                         02780000
+027900         RIDFLD(WS-EMP-ID)                                        02790000
+028000         INTO(EMPLOYEE-RECORD)                                    02800000
+028100         RESP(WS-RESP-CODE)                                       02810001
+028200         UPDATE                                                   02820000
+028300       END-EXEC                                                   02830000
+028400         EVALUATE WS-RESP-CODE                                    02840000
+028500         WHEN DFHRESP(NORMAL)                                     02850000
+028600         MOVE WS-EMP-ID TO EMP-ID                                 02860001
+028700         MOVE NAME2I TO EMP-NAME                                  02870001
+028800         MOVE LOC2I TO EMP-LOC                                    02880001
+028900         MOVE DOB2I TO EMP-DOB                                    02890001
+029000         MOVE TECH2I TO EMP-TECH                                  02900001
+029100         MOVE EARN2I TO EMP-EARN                                  02910001
+029200         MOVE DEDN2I TO EMP-DEDN                                  02920001
+029300          COMPUTE WS-SAL = EMP-EARN - EMP-DEDN                    02930001
+029400           MOVE WS-SAL TO WS-SAL-O                                02940001
+029500       EXEC CICS REWRITE                                          02950000
+029600         FILE('P18AFILE')                                         02960000
+029700         FROM(EMPLOYEE-RECORD)                                    02970000
+029800         RESP(WS-RESP-CODE)                                       02980001
+029900       END-EXEC                                                   02990000
+030000       EVALUATE WS-RESP-CODE                                      03000001
+030100          WHEN DFHRESP(NORMAL)                                    03010001
+030200           MOVE 'UPDATE SUCEES' TO MSG1O                          03020000
+030300           WHEN OTHER                                             03030000
+030400          MOVE 'NOT SUCCESSFULLY UPDATED' TO MSG1O                03040000
+030500       END-EVALUATE                                               03050001
+030600      WHEN OTHER                                                  03060001
+030700        MOVE 'ERROR PROCESS' TO MSG1O                             03070001
+030800         END-EVALUATE                                             03080001
+030900       SET PROCESS-KEY TO TRUE                                    03090000
+031000       MOVE WS-EMP-ID TO ID1O.                                    03100000
+031100*                                                                 03110000
+031200 DATE-TIME-PARA.                                                  03120000
+031300       EXEC CICS ASKTIME                                          03130000
+031400          ABSTIME(WS-DATE-TIME)                                   03140000
+031500       END-EXEC                                                   03150000
+031600       EXEC CICS FORMATTIME                                       03160000
+031700           ABSTIME(WS-DATE-TIME)                                  03170000
+031800          DDMMYYYY(D1O)                                           03180000
+031900          DATESEP                                                 03190000
+032000          TIME(T1O)                                               03200000
+032100          TIMESEP                                                 03210000
+032200       END-EXEC                                                   03220000
+032300       MOVE D1O TO D2O                                            03230000
+032400       MOVE T1O TO T2O.                                           03240000
+032500*                                                                 03250000
+032600 MOVE-DOB.                                                        03260000
+032700       MOVE EMP-DOB TO DOB2O.                                     03270000
+032800*      MOVE EMP-DOB TO WS-OUT-DATE                                03280000

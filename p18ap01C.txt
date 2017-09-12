@@ -1,0 +1,72 @@
+000100 IDENTIFICATION DIVISION.                                         00010001
+000200 PROGRAM-ID. P18AP01.                                             00020001
+000300 DATA DIVISION.                                                   00030001
+000400 WORKING-STORAGE SECTION.                                         00040001
+000500 01  WS-CA       PIC X(01).                                       00050001
+000600 01  WS-IN1      PIC 9(02).                                       00060001
+000700 01  WS-IN1O REDEFINES WS-IN1 PIC X(02).                          00070001
+000800 01  WS-IN2      PIC 9(02).                                       00080001
+000900 01  WS-IN2O REDEFINES WS-IN2 PIC X(02).                          00090001
+001000 01  WS-OUT      PIC 9(03).                                       00100001
+001100 01  WS-OUTO     PIC ZZ9 VALUE ZERO.                              00110004
+001200 01  WS-MESSAGE  PIC X(30) VALUE                                  00120001
+001300     'END OF THE PROGRAM, BYE, BYE!!'.                            00130001
+001400     COPY P18AS01.                                                00140001
+001500     COPY DFHAID.                                                 00150001
+001600 LINKAGE SECTION.                                                 00160001
+001700 01  DFHCOMMAREA     PIC X(01).                                   00170001
+001800 PROCEDURE DIVISION.                                              00180001
+001900 MAIN-PARA.                                                       00190001
+002000     IF EIBCALEN = ZERO                                           00200001
+002100         PERFORM FIRST-PARA                                       00210001
+002200     ELSE                                                         00220001
+002300         PERFORM NEXT-PARA.                                       00230001
+002400 END-PARA.                                                        00240001
+002500     EXEC CICS RETURN                                             00250001
+002600         TRANSID('P18A')                                          00260001
+002700         COMMAREA(WS-CA)                                          00270001
+002800     END-EXEC.                                                    00280001
+002900 FIRST-PARA.                                                      00290001
+003000     MOVE LOW-VALUES TO CALMAPO                                   00300003
+003100      PERFORM SEND-MAP.                                           00310003
+003200 SEND-MAP.                                                        00320003
+003300     EXEC CICS SEND                                               00330001
+003400         MAP('CALMAP')                                            00340001
+003500         MAPSET('P18AS01')                                        00350001
+003600         FROM (CALMAPO)                                           00360001
+003700         ERASE                                                    00370001
+003800     END-EXEC.                                                    00380001
+003900 NEXT-PARA.                                                       00390001
+004000     IF EIBAID = DFHPF3                                           00400001
+004100         EXEC CICS SEND TEXT                                      00410001
+004200             FROM(WS-MESSAGE)                                     00420001
+004300             ERASE                                                00430001
+004400         END-EXEC                                                 00440001
+004500         EXEC CICS RETURN                                         00450001
+004600         END-EXEC                                                 00460001
+004700     ELSE                                                         00470001
+004800     IF EIBAID = DFHENTER                                         00480001
+004900         PERFORM PROCESS-PARA                                     00490001
+005000     ELSE                                                         00500001
+005100         MOVE 'INVALID KEY PRESSED' TO MESSAGEO.                  00510001
+005200     PERFORM SEND-MAP.                                            00520003
+005300 PROCESS-PARA.                                                    00530001
+005400     PERFORM RECEIVE-MAP.                                         00540001
+005500     IF INPUT1L = ZERO OR INPUT2L = ZERO                          00550001
+005600         MOVE 'PLEASE ENTER VALID INPUTS' TO MESSAGEO             00560001
+005700     ELSE                                                         00570001
+005800        IF INPUT1I IS NUMERIC AND INPUT2I IS NUMERIC              00580001
+005900             MOVE INPUT1I TO WS-IN1O                              00590001
+006000             MOVE INPUT2I TO WS-IN2O                              00600001
+006100             COMPUTE WS-OUT = WS-IN1 + WS-IN2                     00610001
+006200             MOVE WS-OUT  TO OUTO                                 00620004
+006300             MOVE WS-OUTO TO OUTPUTO                              00630004
+006400             MOVE 'SUM OF 2 NUMBERS IS DISPLAYED' TO MESSAGEO     00640001
+006500        ELSE                                                      00650001
+006600             MOVE 'INPUTS ARE NOT NUMERIC' TO MESSAGEO.           00660001
+006700 RECEIVE-MAP.                                                     00670001
+006800     EXEC CICS RECEIVE                                            00680001
+006900         MAP('CALMAP')                                            00690001
+007000         MAPSET('P18AS01')                                        00700001
+007100         INTO(CALMAPI)                                            00710001
+007200     END-EXEC.                                                    00720001
